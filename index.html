@@ -18,21 +18,22 @@
     #enter { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
              background:#0b0b10; color:white; z-index: 20; }
     #enter button { font-size: 18px; padding: 10px 16px; border-radius: 10px; border: 0; }
+    #err { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 12px; color: #fff; background: rgba(200,0,0,.75); font-size: 13px; display: none; z-index: 30; }
     a { color: #8fd3ff; }
   </style>
 </head>
 <body>
   <div id="enter"><button id="startBtn">Start AR</button></div>
   <div id="ui"><span id="hint">Point your camera at the I³T sticker</span></div>
+  <div id="err"></div>
 
   <!-- MindAR scene -->
   <a-scene
-    mindar-image="imageTargetSrc: ./sticker.mind"
+    mindar-image="imageTargetSrc: ./sticker.mind; uiScanning: true; uiLoading: true"
     embedded
     color-space="sRGB"
     vr-mode-ui="enabled: false"
     renderer="precision: mediump; antialias: true;"
-    device-orientation-permission-ui="enabled: false"
   >
     <!-- Camera with mouse/touch cursor for tapping entities -->
     <a-camera position="0 0 0" look-controls="enabled: false">
@@ -58,19 +59,55 @@
   </a-scene>
 
   <script>
-    // Require user gesture before camera starts on iOS
+    const sceneEl = document.querySelector('a-scene');
     const startBtn = document.getElementById('startBtn');
     const enter = document.getElementById('enter');
-    startBtn.addEventListener('click', () => {
+    const err = document.getElementById('err');
+    const cta = document.getElementById('cta');
+    const targetUrl = "https://gorlatova.pratt.duke.edu/";
+
+    function showErr(msg) {
+      err.textContent = msg;
+      err.style.display = 'block';
+    }
+
+    // Start AR explicitly after a user gesture (iOS requirement)
+    startBtn.addEventListener('click', async () => {
       enter.style.display = 'none';
-      document.querySelector('a-scene').emit('start');
+      try {
+        // MindAR A-Frame exposes the system as 'mindar-image-system'
+        const mindarSystem = sceneEl.systems['mindar-image-system'];
+        if (mindarSystem && mindarSystem.start) {
+          await mindarSystem.start(); // triggers camera permission prompt
+        } else {
+          // Fallback: emit MindAR start event if system not ready
+          sceneEl.emit('start');
+        }
+      } catch (e) {
+        showErr('Camera start failed: ' + (e && e.message ? e.message : e));
+      }
     });
 
-    // Click handler for the CTA plane (opens in same tab to avoid popup blockers)
-    const targetUrl = "https://gorlatova.pratt.duke.edu/";
-    const cta = document.getElementById('cta');
+    // Handle user click on the CTA card
     cta.addEventListener('click', () => {
-      window.location.href = targetUrl;
+      window.location.href = targetUrl; // same-tab to avoid popup blockers
+    });
+
+    // Basic getUserMedia probe (optional): logs errors that cause black screen
+    async function probeCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        stream.getTracks().forEach(t => t.stop());
+      } catch (e) {
+        showErr('Camera permission or HTTPS problem. Tip: ensure HTTPS, open in Safari/Chrome (not in-app), and allow Camera permission in browser settings.');
+        console.error(e);
+      }
+    }
+    // Probe after load (does nothing if permissions are fine)
+    window.addEventListener('load', () => {
+      if (!location.protocol.startsWith('https')) {
+        showErr('This page must be served over HTTPS for camera access.');
+      }
     });
   </script>
 </body>
