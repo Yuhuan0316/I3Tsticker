@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1">
+  <title>I3T WebAR Sticker</title>
+  <!-- A-Frame & MindAR via CDN -->
+  <script src="https://unpkg.com/aframe@1.6.0/dist/aframe.min.js"></script>
+  <script src="https://unpkg.com/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    #ui {
+      position: fixed; left: 0; right: 0; top: 0; padding: 10px 12px; color: white;
+      background: linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0));
+      text-align: center; z-index: 10; font-size: 15px;
+    }
+    #hint { opacity: .9; }
+    #enter { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+             background:#0b0b10; color:white; z-index: 20; }
+    #enter button { font-size: 18px; padding: 10px 16px; border-radius: 10px; border: 0; }
+    a { color: #8fd3ff; }
+  </style>
+</head>
+<body>
+  <div id="enter"><button id="startBtn">Start AR</button></div>
+  <div id="ui"><span id="hint">Point your camera at the I³T sticker</span></div>
+
+  <!-- MindAR scene -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./sticker.mind"
+    embedded
+    color-space="sRGB"
+    vr-mode-ui="enabled: false"
+    renderer="precision: mediump; antialias: true;"
+    device-orientation-permission-ui="enabled: false"
+  >
+    <!-- Camera with mouse/touch cursor for tapping entities -->
+    <a-camera position="0 0 0" look-controls="enabled: false">
+      <a-entity cursor="rayOrigin: mouse"></a-entity>
+    </a-camera>
+
+    <!-- Content anchored to first target (index 0) -->
+    <a-entity mindar-image-target="targetIndex: 0">
+      <!-- A thin card floating above the sticker -->
+      <a-entity position="0 0 0.05" rotation="-90 0 0" scale="1 1 1">
+        <a-plane id="cta"
+                 width="0.9" height="0.35"
+                 opacity="0.95"
+                 color="#1b88ff"
+                 material="shader: standard; metalness: 0.2; roughness: 0.4; emissive: #1b88ff; emissiveIntensity: 0.25;">
+          <a-animation attribute="scale" from="0.98 0.98 1" to="1.02 1.02 1" direction="alternate" dur="900" repeat="indefinite" easing="ease-in-out-cubic"></a-animation>
+          <a-text value="Open I³T Website" color="#ffffff" align="center" width="1.2" position="0 0 0.01"></a-text>
+        </a-plane>
+        <!-- Optional small caption -->
+        <a-text value="Tap the blue card" color="#ffffff" align="center" width="1.4" position="0 -0.28 0.01"></a-text>
+      </a-entity>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    // Require user gesture before camera starts on iOS
+    const startBtn = document.getElementById('startBtn');
+    const enter = document.getElementById('enter');
+    startBtn.addEventListener('click', () => {
+      enter.style.display = 'none';
+      document.querySelector('a-scene').emit('start');
+    });
+
+    // Click handler for the CTA plane (opens in same tab to avoid popup blockers)
+    const targetUrl = "https://gorlatova.pratt.duke.edu/";
+    const cta = document.getElementById('cta');
+    cta.addEventListener('click', () => {
+      window.location.href = targetUrl;
+    });
+  </script>
+</body>
+</html>
